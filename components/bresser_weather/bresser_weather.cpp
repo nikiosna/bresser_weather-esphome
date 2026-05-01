@@ -1,5 +1,6 @@
 #include "bresser_weather.h"
 #include "esphome/core/log.h"
+#include <SPI.h>
 
 namespace esphome
 {
@@ -11,6 +12,9 @@ namespace esphome
         void BresserWeatherComponent::setup()
         {
             ESP_LOGI(TAG, "Setting up Bresser Weather Sensor Receiver");
+#if defined(PIN_RECEIVER_SPI_SCK) && defined(PIN_RECEIVER_SPI_MOSI) && defined(PIN_RECEIVER_SPI_MISO)
+            SPI.begin(PIN_RECEIVER_SPI_SCK, PIN_RECEIVER_SPI_MISO, PIN_RECEIVER_SPI_MOSI, PIN_RECEIVER_CS);
+#endif
             this->ws_.begin();
             ESP_LOGI(TAG, "Receiver initialized successfully");
         }

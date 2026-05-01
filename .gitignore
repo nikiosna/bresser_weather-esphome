@@ -13,6 +13,9 @@ secrets.yaml
 # User-specific configs
 bresser_weather.yaml
 
+# Test directory
+test/
+
 # IDE
 .vscode/
 .idea/

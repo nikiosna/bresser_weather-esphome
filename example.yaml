@@ -8,14 +8,22 @@ substitutions:
 esphome:
   name: ${device_name}
 
-esp8266:
-  board: d1_mini # or esp01_1m for ESP-01
+# --- Board selection (uncomment one) ---
 
-# Required: SPI configuration for CC1101 radio module
-spi:
-  clk_pin: GPIO14 # D5
-  miso_pin: GPIO12 # D6
-  mosi_pin: GPIO13 # D7
+# Option A: Wemos D1 Mini (ESP8266) with external CC1101
+# esp8266:
+#   board: d1_mini
+# spi:
+#   clk_pin: GPIO14  # D5
+#   miso_pin: GPIO12 # D6
+#   mosi_pin: GPIO13 # D7
+
+# Option B: Heltec WiFi LoRa 32 V3 (ESP32-S3) with onboard SX1262
+esp32:
+  board: heltec_wifi_lora_32_V3
+  variant: esp32s3
+  framework:
+    type: arduino
 
 # External component - use from GitHub after publishing
 external_components:
@@ -58,6 +66,19 @@ web_server:
 
 # Bresser Weather Sensor Component
 bresser_weather:
+  # Radio module: cc1101 (default) or sx1262
+  # For Heltec WiFi LoRa 32 V3 use sx1262 with its onboard LoRa pins:
+  radio_module: sx1262
+  cs_pin: 8
+  irq_pin: 14   # DIO1
+  rst_pin: 12
+  busy_pin: 13
+  spi_clk_pin: 9
+  spi_mosi_pin: 10
+  spi_miso_pin: 11
+  # For D1 Mini + CC1101 you can omit all pin options (defaults apply):
+  # radio_module: cc1101
+
   filter_sensor_id: 0x00001F11 # Only accept data from this sensor ID
   temperature:
     name: "Temperature"
