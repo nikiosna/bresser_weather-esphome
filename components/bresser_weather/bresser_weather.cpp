@@ -1,5 +1,6 @@
 #include "bresser_weather.h"
 #include "esphome/core/log.h"
+#include <SPI.h>
 
 namespace esphome
 {
@@ -11,6 +12,18 @@ namespace esphome
         void BresserWeatherComponent::setup()
         {
             ESP_LOGI(TAG, "Setting up Bresser Weather Sensor Receiver");
+
+#if defined(USE_SX1262)
+            // Enable Vext on Heltec v3 (GPIO36, active-low) to power the OLED display
+            pinMode(36, OUTPUT);
+            digitalWrite(36, LOW);
+            delay(50);
+#endif
+
+#if defined(PIN_RECEIVER_SPI_SCK) && defined(PIN_RECEIVER_SPI_MOSI) && defined(PIN_RECEIVER_SPI_MISO)
+            SPI.begin(PIN_RECEIVER_SPI_SCK, PIN_RECEIVER_SPI_MISO, PIN_RECEIVER_SPI_MOSI, PIN_RECEIVER_CS);
+#endif
+
             this->ws_.begin();
             ESP_LOGI(TAG, "Receiver initialized successfully");
         }

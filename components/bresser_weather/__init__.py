@@ -1,3 +1,4 @@
+import os
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, binary_sensor, text_sensor
@@ -15,8 +16,18 @@ from esphome.const import (
     UNIT_PERCENT,
 )
 
-DEPENDENCIES = ["esp8266"]
+DEPENDENCIES = []
 AUTO_LOAD = ["sensor", "binary_sensor", "text_sensor"]
+
+CONF_RADIO_MODULE = "radio_module"
+CONF_CS_PIN = "cs_pin"
+CONF_IRQ_PIN = "irq_pin"
+CONF_RST_PIN = "rst_pin"
+CONF_BUSY_PIN = "busy_pin"
+CONF_SPI_CLK_PIN = "spi_clk_pin"
+CONF_SPI_MOSI_PIN = "spi_mosi_pin"
+CONF_SPI_MISO_PIN = "spi_miso_pin"
+CONF_TCXO_VOLTAGE = "tcxo_voltage"
 
 CONF_WIND_GUST = "wind_gust"
 CONF_WIND_SPEED = "wind_speed"
@@ -29,12 +40,35 @@ CONF_BATTERY_OK = "battery_ok"
 CONF_SENSOR_ID = "sensor_id"
 CONF_FILTER_SENSOR_ID = "filter_sensor_id"
 
-# Custom units not in const
 UNIT_METER_PER_SECOND = "m/s"
 UNIT_MILLIMETER = "mm"
 UNIT_DEGREES = "°"
 UNIT_KILOLUX = "klx"
 UNIT_DBM = "dBm"
+
+RADIO_MODULE_CC1101 = "cc1101"
+RADIO_MODULE_SX1262 = "sx1262"
+
+DEFAULTS = {
+    RADIO_MODULE_CC1101: {
+        CONF_CS_PIN: 15,
+        CONF_IRQ_PIN: 4,
+        CONF_RST_PIN: -1,
+        CONF_BUSY_PIN: -1,
+        CONF_SPI_CLK_PIN: -1,
+        CONF_SPI_MOSI_PIN: -1,
+        CONF_SPI_MISO_PIN: -1,
+    },
+    RADIO_MODULE_SX1262: {
+        CONF_CS_PIN: 8,
+        CONF_IRQ_PIN: 14,
+        CONF_RST_PIN: 12,
+        CONF_BUSY_PIN: 13,
+        CONF_SPI_CLK_PIN: 9,
+        CONF_SPI_MOSI_PIN: 10,
+        CONF_SPI_MISO_PIN: 11,
+    },
+}
 
 bresser_weather_ns = cg.esphome_ns.namespace("bresser_weather")
 BresserWeatherComponent = bresser_weather_ns.class_("BresserWeatherComponent", cg.Component)
@@ -42,6 +76,17 @@ BresserWeatherComponent = bresser_weather_ns.class_("BresserWeatherComponent", c
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(BresserWeatherComponent),
+        cv.Optional(CONF_RADIO_MODULE, default=RADIO_MODULE_CC1101): cv.one_of(
+            RADIO_MODULE_CC1101, RADIO_MODULE_SX1262, lower=True
+        ),
+        cv.Optional(CONF_CS_PIN): cv.int_,
+        cv.Optional(CONF_IRQ_PIN): cv.int_,
+        cv.Optional(CONF_RST_PIN): cv.int_,
+        cv.Optional(CONF_BUSY_PIN): cv.int_,
+        cv.Optional(CONF_SPI_CLK_PIN): cv.int_,
+        cv.Optional(CONF_SPI_MOSI_PIN): cv.int_,
+        cv.Optional(CONF_SPI_MISO_PIN): cv.int_,
+        cv.Optional(CONF_TCXO_VOLTAGE): cv.float_,
         cv.Optional(CONF_TEMPERATURE): sensor.sensor_schema(
             unit_of_measurement=UNIT_CELSIUS,
             accuracy_decimals=1,
@@ -102,6 +147,41 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
 
+    module = config[CONF_RADIO_MODULE]
+    defaults = DEFAULTS[module]
+
+    cs_pin = config.get(CONF_CS_PIN, defaults[CONF_CS_PIN])
+    irq_pin = config.get(CONF_IRQ_PIN, defaults[CONF_IRQ_PIN])
+    rst_pin = config.get(CONF_RST_PIN, defaults[CONF_RST_PIN])
+    busy_pin = config.get(CONF_BUSY_PIN, defaults[CONF_BUSY_PIN])
+    spi_clk = config.get(CONF_SPI_CLK_PIN, defaults[CONF_SPI_CLK_PIN])
+    spi_mosi = config.get(CONF_SPI_MOSI_PIN, defaults[CONF_SPI_MOSI_PIN])
+    spi_miso = config.get(CONF_SPI_MISO_PIN, defaults[CONF_SPI_MISO_PIN])
+
+    rst_value = "RADIOLIB_NC" if rst_pin == -1 else str(rst_pin)
+    busy_value = "RADIOLIB_NC" if busy_pin == -1 else str(busy_pin)
+
+    if module == RADIO_MODULE_CC1101:
+        cg.add_build_flag("-DUSE_CC1101")
+        cg.add_build_flag(f"-DPIN_RECEIVER_CS={cs_pin}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_IRQ={irq_pin}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_GPIO={config.get(CONF_BUSY_PIN, 5)}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_RST={rst_value}")
+    elif module == RADIO_MODULE_SX1262:
+        cg.add_build_flag("-DUSE_SX1262")
+        cg.add_build_flag(f"-DPIN_RECEIVER_CS={cs_pin}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_IRQ={irq_pin}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_RST={rst_value}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_BUSY={busy_value}")
+        tcxo = config.get(CONF_TCXO_VOLTAGE, 0.0)
+        if tcxo > 0:
+            cg.add_build_flag(f"-DPIN_RECEIVER_TCXO_MV={int(tcxo * 1000)}")
+
+    if spi_clk != -1:
+        cg.add_build_flag(f"-DPIN_RECEIVER_SPI_SCK={spi_clk}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_SPI_MOSI={spi_mosi}")
+        cg.add_build_flag(f"-DPIN_RECEIVER_SPI_MISO={spi_miso}")
+
     if CONF_TEMPERATURE in config:
         sens = await sensor.new_sensor(config[CONF_TEMPERATURE])
         cg.add(var.set_temperature_sensor(sens))
@@ -149,12 +229,12 @@ async def to_code(config):
     if CONF_FILTER_SENSOR_ID in config:
         cg.add(var.set_filter_sensor_id(config[CONF_FILTER_SENSOR_ID]))
 
-    # Add library dependencies
+    cg.add_build_flag("-I${platformio.packages_dir}/framework-arduinoespressif32/libraries/SPI/src")
     cg.add_platformio_option("lib_deps", ["matthias-bs/BresserWeatherSensorReceiver@0.37.0"])
-    cg.add_platformio_option("lib_deps", ["jgromes/RadioLib@7.4.0"])
+    cg.add_platformio_option("lib_deps", ["jgromes/RadioLib@7.5.0"])
     cg.add_platformio_option("lib_deps", ["vshymanskyy/Preferences@2.2.2"])
     cg.add_platformio_option("lib_deps", ["bblanchon/ArduinoJson@7.4.2"])
-    
-    # Add build flag to ensure library dependencies are found
-    cg.add_build_flag("-DUSE_CC1101")
     cg.add_platformio_option("lib_ldf_mode", "deep+")
+
+    script_path = os.path.join(os.path.dirname(__file__), "pre_build.py")
+    cg.add_platformio_option("extra_scripts", [f"pre:{script_path}"])
