@@ -140,7 +140,6 @@ namespace esphome
                 }
             }
 
-            delay(100);
         }
 
     } // namespace bresser_weather

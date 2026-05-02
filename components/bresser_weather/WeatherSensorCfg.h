@@ -52,6 +52,10 @@
 #define RADIO_CHIP SX1276
 #elif defined(USE_SX1262)
 #define RADIO_CHIP SX1262
+// WeatherSensor.cpp uses PIN_RECEIVER_GPIO as the 4th Module() arg (BUSY pin for SX1262)
+#if defined(PIN_RECEIVER_BUSY) && !defined(PIN_RECEIVER_GPIO)
+#define PIN_RECEIVER_GPIO PIN_RECEIVER_BUSY
+#endif
 #elif defined(USE_LR1121)
 #define RADIO_CHIP LR1121
 #else
