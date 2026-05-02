@@ -22,3 +22,5 @@ bresser_weather.yaml
 
 # Logs
 *.log
+
+test/
