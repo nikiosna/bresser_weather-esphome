@@ -5,7 +5,7 @@ from SCons.Script import Import
 
 Import("env")
 
-component_dir = os.path.dirname(os.path.abspath(__file__))
+component_dir = os.path.join(env.get("PROJECT_SRC_DIR"), "esphome", "components", "bresser_weather")
 libdeps_dir = os.path.join(env.get("PROJECT_LIBDEPS_DIR"), env.get("PIOENV"), "BresserWeatherSensorReceiver", "src")
 
 
