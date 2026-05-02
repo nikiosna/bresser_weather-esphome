@@ -229,8 +229,9 @@ async def to_code(config):
     if CONF_FILTER_SENSOR_ID in config:
         cg.add(var.set_filter_sensor_id(config[CONF_FILTER_SENSOR_ID]))
 
+    cg.add_build_flag("-I${platformio.packages_dir}/framework-arduinoespressif32/libraries/SPI/src")
     cg.add_platformio_option("lib_deps", ["matthias-bs/BresserWeatherSensorReceiver@0.37.0"])
-    cg.add_platformio_option("lib_deps", ["jgromes/RadioLib@7.4.0"])
+    cg.add_platformio_option("lib_deps", ["jgromes/RadioLib@7.5.0"])
     cg.add_platformio_option("lib_deps", ["vshymanskyy/Preferences@2.2.2"])
     cg.add_platformio_option("lib_deps", ["bblanchon/ArduinoJson@7.4.2"])
     cg.add_platformio_option("lib_ldf_mode", "deep+")
